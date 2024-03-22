@@ -1,1 +1,105 @@
+from stl import mesh
+import tkinter as tk
+from tkinter import filedialog, ttk, messagebox
+import os
+import io
+
+# Ustawienia cen
+CENA_ZA_URUCHOMIENIE = 30  # Stała opłata za uruchomienie drukarki
+CENY_ZA_CM3 = {
+    "PLA": 100 / 35,
+    "PETG": 100 / 30,
+    "ABS": 100 / 29,
+    "PA12": 100 / 20,
+    "PC": 100 / 22
+}
+MAX_RECENT_FILES = 5  # Maksymalna liczba ostatnich plików do wyświetlenia
+recent_files = []  # Lista przechowująca ostatnio używane pliki
+
+def calculate_stl_volume(file_path):
+    your_mesh = mesh.Mesh.from_file(file_path)
+    volume = your_mesh.get_mass_properties()[0] / 1000  # Przeliczenie z mm³ na cm³
+    return volume
+
+def update_prices(volume):
+    prices = {material: CENA_ZA_URUCHOMIENIE + (volume * cena) for material, cena in CENY_ZA_CM3.items()}
+    return prices
+
+def display_pricing_for_file(file_path):
+    volume = calculate_stl_volume(file_path)
+    prices = update_prices(volume)
+    update_price_table(prices)
+
+def update_price_table(prices):
+    price_table.delete(*price_table.get_children())  # Wyczyść aktualną tabelę
+    for material, price in prices.items():
+        price_table.insert('', 'end', values=(material, f"{price:.2f} zł"))
+
+def open_file_and_calculate_price():
+    file_path = filedialog.askopenfilename(filetypes=[("STL files", "*.stl")])
+    if file_path:
+        if file_path not in recent_files:
+            recent_files.insert(0, file_path)  # Dodaj pełną ścieżkę pliku na początek listy
+            if len(recent_files) > MAX_RECENT_FILES:
+                recent_files.pop()  # Usuń najstarszy plik, jeśli lista jest za długa
+        update_recent_files_list()
+        display_pricing_for_file(file_path)
+
+def update_recent_files_list():
+    recent_files_menu.delete(0, tk.END)  # Wyczyść aktualną listę
+    for full_path in recent_files:
+        file_name = os.path.basename(full_path)
+        recent_files_menu.insert(tk.END, file_name)
+
+def on_select_recent_file(evt):
+    w = evt.widget
+    index = int(w.curselection()[0])
+    file_path = recent_files[index]
+    if os.path.exists(file_path):
+        display_pricing_for_file(file_path)
+    else:
+        messagebox.showerror("Error", "File not found: " + file_path)
+
+def copy_table_to_clipboard():
+    output = io.StringIO()
+    for child in price_table.get_children():
+        item = price_table.item(child)
+        values = item['values']
+        formatted_line = "{} = {} zł\n".format(values[0], values[1])
+        output.write(formatted_line)
+    
+    copied_text = output.getvalue()
+    output.close()
+    
+    root.clipboard_clear()
+    root.clipboard_append(copied_text)
+    messagebox.showinfo("Skopiowano", "Tabela z wyceną została skopiowana do schowka.")
+
+# Ustawienie głównego okna GUI
+root = tk.Tk()
+root.title("Kalkulator ceny druku 3D")
+
+open_file_button = tk.Button(root, text="Importuj plik STL", command=open_file_and_calculate_price)
+open_file_button.pack()
+
+recent_files_label = tk.Label(root, text="Ostatnio wyceniane pliki:")
+recent_files_label.pack()
+recent_files_menu = tk.Listbox(root, height=5)
+recent_files_menu.pack()
+recent_files_menu.bind('<<ListboxSelect>>', on_select_recent_file)
+
+price_table_label = tk.Label(root, text="Ceny dla różnych materiałów:")
+price_table_label.pack()
+columns = ('Material', 'Price')
+price_table = ttk.Treeview(root, columns=columns, show='headings')
+price_table.heading('Material', text='Materiał')
+price_table.heading('Price', text='Cena')
+price_table.pack()
+
+# Button for copying table data
+copy_table_button = tk.Button(root, text="Kopiuj tabelę", command=copy_table_to_clipboard)
+copy_table_button.pack()
+
+# Run the event loop
+root.mainloop()
 
