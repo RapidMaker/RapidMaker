@@ -1,1 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Gallery</title>
+    <style>
+        #imageGallery img {
+            width: 100%;
+            max-width: 300px;
+            margin: 10px;
+            display: none; /* Hide images initially */
+        }
+    </style>
+</head>
+<body>
+    <button id="galleryButton">Show/Hide Gallery</button>
+    <div id="imageGallery">
+        <img src="image1.jpg" alt="Image 1">
+        <img src="image2.jpg" alt="Image 2">
+        <!-- Add more images as needed -->
+    </div>
+
+    <script>
+        document.getElementById('galleryButton').addEventListener('click', function() {
+            var images = document.getElementById('imageGallery').getElementsByTagName('img');
+            for (var i = 0; i < images.length; i++) {
+                images[i].style.display = images[i].style.display === 'block' ? 'none' : 'block';
+            }
+        });
+    </script>
+</body>
+</html>
 
